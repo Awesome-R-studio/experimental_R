@@ -151,6 +151,7 @@ boxText <- function(r, txt, max.cex=NA, min.cex=NA, margin=0.1){
     ## split the txt into words
     ## we can only handle one set of words to start with.. 
     words <- unlist(strsplit(txt, ' '))
+    words.nchar <- nchar(words)
     ## word.widths <- strwidth( words )
     txt.nchar <- nchar(txt)
     char.width <- strwidth( txt ) / txt.nchar ## an approximation
@@ -160,15 +161,24 @@ boxText <- function(r, txt, max.cex=NA, min.cex=NA, margin=0.1){
     ## since no line is likely to give the exact number.
     line.nchar <- sqrt( (char.height / char.width) * (txt.nchar * w / h) )
     line.n <- floor(sqrt( (h/w) * (char.width/char.height) * txt.nchar ))
-    line.nchar <- ceiling(txt.nchar / line.n)
+    ### UGLY KLUDGE BODGE
+    ### to avoid doing something re-iterative; as that is the only way that I can
+    ### thing of getting things to work. 
+    line.nchar <- ceiling(txt.nchar / line.n) + mean(words.nchar) * line.n / 3
 
+    ## an approximation of the space under the current cex
+    line.width <- line.nchar * char.width 
+    
     ## for filling the box
     txt.prt <- words[1]
     i <- 2
     while(i <= length(words)){
+        current.line <- words[i-1]
         line.length <- nchar( words[i-1] )
-        while( line.length + nchar(words[i]) <= line.nchar && i <= length(words)  ){
+        while(i <= length(words) && strwidth(paste(current.line, words[i])) <= line.width ){
+#        while( line.length + nchar(words[i]) <= line.nchar && i <= length(words)  ){
             txt.prt <- paste(txt.prt, words[i]) ## sep is a space..
+            current.line <- paste(current.line, words[i])
             line.length <- line.length + nchar(words[i]) + 1
             i <- i + 1
         }
@@ -189,6 +199,7 @@ boxText <- function(r, txt, max.cex=NA, min.cex=NA, margin=0.1){
 
 ## test the above..
 plot(1,1, type='n', xlim=c(-100, 100), ylim=c(-100, 100))
+
 xleft <- -80
 xright <- -20
 ybot <- -80
@@ -196,6 +207,12 @@ ytop <- -50
 rect( xleft, ybot, xright, ytop )
 boxText( c(xleft, xright, ybot, ytop), 'how is this bla bla going to look then, long enough or and then some more?')
 
+xleft <- -80
+xright <- -0
+ybot <- 0
+ytop <- 45
+rect( xleft, ybot, xright, ytop )
+boxText( c(xleft, xright, ybot, ytop), "Here is a longer piece of text. This doesn't have anyting funny in it like newlines or anything, but these really will not work properly. If a newline is encountered the function would have to be a bit more clever. Not that much more, but a bit")
 
 ### so taken together we can do..
 gene.pos <- matrix(ncol=2, byrow=TRUE,
