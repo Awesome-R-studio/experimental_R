@@ -142,10 +142,62 @@ pathLetters <- function( x, y, word, cex=NA, cex.adj=0.75, useNormals=FALSE, ...
     }
 }
 
+## r is the locations of a bounding box
+## left, right, bottom, top (the same as you get from par("usr")
+## this function seems to work OK, but is really rather messy.. 
+boxText <- function(r, txt, max.cex=NA, min.cex=NA, margin=0.1){
+    w = r[2] - r[1]
+    h = r[4] - r[3]
+    ## split the txt into words
+    ## we can only handle one set of words to start with.. 
+    words <- unlist(strsplit(txt, ' '))
+    ## word.widths <- strwidth( words )
+    txt.nchar <- nchar(txt)
+    char.width <- strwidth( txt ) / txt.nchar ## an approximation
+    char.height <- strheight( txt )  ## should be the same for all
+    ## work out the ideal number of chars per line on the basis of the dimensions of the box
+    ## we intentionally skew this towards allowing a longe text per line than necessary,
+    ## since no line is likely to give the exact number.
+    line.nchar <- sqrt( (char.height / char.width) * (txt.nchar * w / h) )
+    line.n <- floor(sqrt( (h/w) * (char.width/char.height) * txt.nchar ))
+    line.nchar <- ceiling(txt.nchar / line.n)
+
+    ## for filling the box
+    txt.prt <- words[1]
+    i <- 2
+    while(i <= length(words)){
+        line.length <- nchar( words[i-1] )
+        while( line.length + nchar(words[i]) <= line.nchar && i <= length(words)  ){
+            txt.prt <- paste(txt.prt, words[i]) ## sep is a space..
+            line.length <- line.length + nchar(words[i]) + 1
+            i <- i + 1
+        }
+        if(i <= length(words)){
+            txt.prt <- paste(txt.prt, words[i], sep='\n')
+            i <- i + 1
+        }
+    }
+    ## now I should have something reasonable..
+    txt.width.r <- (1 + margin) * strwidth(txt.prt) / w
+    txt.height.r <- (1 + margin) * strheight(txt.prt) / h
+    ## simply scale the cex appropriately
+    max.r <- max( c(txt.width.r, txt.height.r) )
+    cex <- par("cex") / max.r
+    text( r[1] + w * margin/2, mean(r[3:4]), txt.prt, cex=cex, adj=c(0,0.5) )
+    invisible(cex)
+}
+
+## test the above..
+plot(1,1, type='n', xlim=c(-100, 100), ylim=c(-100, 100))
+xleft <- -80
+xright <- -20
+ybot <- -80
+ytop <- -50
+rect( xleft, ybot, xright, ytop )
+boxText( c(xleft, xright, ybot, ytop), 'how is this bla bla going to look then, long enough or and then some more?')
+
+
 ### so taken together we can do..
-
-
-
 gene.pos <- matrix(ncol=2, byrow=TRUE,
                    data=c(10, 90,
                           120, 150,
@@ -179,6 +231,7 @@ m.w <- 20
 #lineArc(0, 0, m.r, 0, 2 * pi, lty=2 )
 #polygArc( 0, 0, m.r, m.w, 0, 2 * pi )
 plotPolar(0, 0, measure.x, measure.y, m.r, m.w, 0, 2*pi, col=hsvScale(1:length(measure.x)), pch=19 )
+
 dev.off()
 
 ### we can also do something a bit silly,,,
