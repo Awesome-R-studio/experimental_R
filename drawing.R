@@ -142,9 +142,34 @@ pathLetters <- function( x, y, word, cex=NA, cex.adj=0.75, useNormals=FALSE, ...
     }
 }
 
+## wraps text using usr coordinates roughly translated to columns
+## does not use strwrap in order to work better with non-monospaced
+## fonts
+## returns the string with newlines added and width and height
+## required
+usrStrWrap <- function(w, txt, ...){
+    words <- unlist(strsplit(txt, ' |\t'))
+    current.line = words[1]
+    txt.f <- current.line
+    i <- 2
+    while(i <= length(words)){
+        if( strwidth( paste( current.line, words[i] ), ... ) <= w ){
+            current.line <- paste(current.line, words[i])
+            txt.f <- paste(txt.f, words[i])
+        }else{
+            current.line <- words[i]
+            txt.f <- paste(txt.f, words[i], sep='\n')
+        }
+        i <- i + 1
+    }
+    list('w'=strwidth(txt.f, ...), 'h'=strheight(txt.f, ...), 's'=txt.f)
+}
+
 ## r is the locations of a bounding box
 ## left, right, bottom, top (the same as you get from par("usr")
 ## this function seems to work OK, but is really rather messy.. 
+## note that I could probably use strwrap here; but that wraps on
+## columns.. 
 boxText <- function(r, txt, max.cex=NA, min.cex=NA, margin=0.1){
     w = r[2] - r[1]
     h = r[4] - r[3]
@@ -213,6 +238,13 @@ ybot <- 0
 ytop <- 45
 rect( xleft, ybot, xright, ytop )
 boxText( c(xleft, xright, ybot, ytop), "Here is a longer piece of text. This doesn't have anyting funny in it like newlines or anything, but these really will not work properly. If a newline is encountered the function would have to be a bit more clever. Not that much more, but a bit")
+
+## try the string_wrap...
+txt <- 'Hello there. This is a piece of text with some stuff in it. I\'m not really sure how it will come out when I format it, but we\'ll soon find out'
+txt.f <- usrStrWrap( 75, txt )
+txt.f <- usrStrWrap( 75, txt, cex=0.5 )
+text(25, 0, txt.f$s, adj=c(0,1), cex=0.5 )
+rect( 25, 0-txt.f$h, 100, 0, col='red' )
 
 ### so taken together we can do..
 gene.pos <- matrix(ncol=2, byrow=TRUE,
