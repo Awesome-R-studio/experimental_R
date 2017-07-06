@@ -222,6 +222,60 @@ boxText <- function(r, txt, max.cex=NA, min.cex=NA, margin=0.1){
     invisible(cex)
 }
 
+
+## some ideas as to how to output tables in R..
+## there are a whole load of things, but these generally markdown / latex / html
+## output, rather than simply drawing a tabe using the plot functions..
+## say we would like to plot a table,,
+## this is still a bit messy, but it works OK. 
+plotTable <- function(x, y, df, c.widths=NULL, num.format=NA, row.margin=1, col.margin=0.1, doPlot=TRUE,
+                      row.bg=NA, column.bg=NA, ...){
+    df.m <- as.matrix(df)
+    if(length(num.format) > 1 || !is.na(num.format)){
+        for(i in 1:ncol(df)){
+            if(is.numeric(df[,i]))
+                df.m[,i] <- sprintf(num.format[ 1 + (i-1) %% length(num.format) ], df[,i])
+        }
+    }
+    if(is.null(c.widths)){
+        c.widths <- (apply( df.m, 2, function(x){ max( strwidth(x, ...) ) } ))
+    }
+    ## determine r.heights using the usrStrWrap function
+    r.heights <- apply( df.m, 1,
+                       function(x){
+                           x.f <- vector(mode='list', length=length(x))
+                           for(i in 1:length(x))
+                               x.f[[i]] <- usrStrWrap( c.widths[i], x[i], ... )
+                           max( sapply(x.f, function(y){ y$h } ) )
+                       })
+    
+    v.margin <- mean( r.heights ) * row.margin/2
+    r.heights <- r.heights * (1 + row.margin)
+
+    h.margin <- mean( c.widths ) * col.margin / 2
+    c.widths <- c.widths + mean( c.widths ) * col.margin
+### then we know where to place things, starting at the top and using adj=c(0,1)
+### 
+    y.bot <- y - cumsum(r.heights)
+    y.top <- c(y, y.bot[ -length(y.bot) ])
+    x.right <- x + cumsum(c.widths)
+    x.left <- c(x, x.right[ -length(x.right) ])
+    
+    ## redo these so that we can have a matrix of each positions.
+    y.top.m <- matrix( rep(y.top, ncol(df.m)), nrow=length(y.top) )
+    x.left.m <- matrix( rep(x.left, nrow(df.m)), ncol=length(x.left), byrow=TRUE )
+    
+    ## then simply,,
+    if(doPlot){
+        if(length(row.bg) > 1 || !is.na(row.bg))
+            rect( x.left[1], y.bot, rev(x.right)[1], y.top, col=row.bg, border=NA )
+        if(length(column.bg) > 1 || !is.na(column.bg))
+            rect( x.left, rev(y.bot)[1], x.right, y.top[1], col=column.bg, border=NA )
+        text( x.left.m + h.margin, y.top.m - v.margin, df.m, adj=c(0,1), ... )
+    }
+    invisible( list('r'=x.right, 'l'=x.left, 't'=y.top, 'b'=y.bot) )
+}
+
 ## test the above..
 plot(1,1, type='n', xlim=c(-100, 100), ylim=c(-100, 100))
 
@@ -245,6 +299,33 @@ txt.f <- usrStrWrap( 75, txt )
 txt.f <- usrStrWrap( 75, txt, cex=0.5 )
 text(25, 0, txt.f$s, adj=c(0,1), cex=0.5 )
 rect( 25, 0-txt.f$h, 100, 0, col='red' )
+
+## we can now try to use the function we have to make a table of sorts ..
+## note that this is not smart enough to sort out problems with words that don't fit
+## but we can perhaps combine some of our functions for this..
+table <- read.table( 'RRBS_annotation_table.csv', sep='\t', stringsAsFactors=FALSE, header=TRUE )
+sub.table <- table[ , c('Species', 'Cell_type', 'Generation', 'Feed', 'Reads_all', 'Alignment_rate', 'meanCoverage')]
+
+## the problem is pretty much that the cex parameter to usr coordinates ratio changes depending on
+## the plot width. But whatever,,
+## we have 61 rows and 7 columns..
+col.widths <- c(10, 7.5, 5, 10, 10, 5, 5)
+num.format <- c(NA, NA, NA, NA, '%.2e', NA, '%.2f')
+plot(1, type='n', xlim=c(0,sum(col.widths)), ylim=c(0,200), axes=FALSE, xlab='', ylab='')
+plotTable( 0, 200, sub.table, c.widths=col.widths, num.format=num.format, margin=0.5, cex=0.75 )
+
+o <- with(sub.table, order( Cell_type, Generation, Feed ))
+
+plot(1, type='n', xlim=c(0,sum(col.widths)), ylim=c(0,200), axes=FALSE, xlab='', ylab='')
+p.pos <- plotTable( 0, 200, sub.table[o,], num.format=num.format, col.margin=0.5, row.margin=1.2, cex=0.8, family='sans',
+#                   column.bg=c(rgb(0.5,0.5,0.5,0.5), rgb(0.9, 0.9, 0.9, 0.5)),
+                   row.bg=c(rgb(0.5,0.5,0.5,0.5), rgb(0.9, 0.9, 0.9, 0.5)) )
+segments( p.pos$l[-1], rev(p.pos$b)[1], p.pos$l[-1], p.pos$t[1], lty=2 )
+
+segments( rep(p.pos$l[1], length(p.pos$t)), p.pos$b, rep(rev(p.pos$r)[1], length(p.pos$t)), p.pos$b )
+
+rect( rep(p.pos$l[1], length(p.pos$t)), p.pos$b, rep(rev(p.pos$r)[1], length(p.pos$t)), p.pos$t, col=c(rgb(0.5,0.5,0.5,0.5), rgb(0,0,0,0)) )
+rect( p.pos$l[1], p.pos$b, rev(p.pos$r)[1], p.pos$t, col=c(rgb(0.5,0.5,0.5,0.5), rgb(0,0,0,0)) )
 
 ### so taken together we can do..
 gene.pos <- matrix(ncol=2, byrow=TRUE,
@@ -318,24 +399,3 @@ pathLetters( x, y, txt, useNormals=TRUE, col='red', cex.adj=1 )
 pathLetters( x, y, txt, useNormals=TRUE, col='brown', cex=1 )
 dev.off()
 
-## some ideas as to how to output tables in R..
-## there are a whole load of things, but these generally markdown / latex / html
-## output, rather than simply drawing a tabe using the plot functions..
-
-## say we would like to plot a table,,
-
-plotTable <- function(df, c.widths=NULL){
-    if(is.null(c.widths)){
-        c.widths <- apply( df, 2, function(x){ max( strwidth(x) ) } )
-    }
-    r.heights <- apply( df, 1, function(x){ max( strheight(x) ) } )
-    max.width <- max( c.widths )
-    max.height <- max( r.heights )
-    w.m <- 0.1 * max.width
-    r.m <- 0.1 * max.height
-    x.pos <- cumsum( c.widths + w.m )
-    y.pos <- cumsum( r.heights + r.m )
-
-    ## then in the simplest possible way..
-    text( rep(x.pos, nrow(df)), t( matrix(rep(y.pos, ncol(df)), nrow=nrow(df))), df )
-}
