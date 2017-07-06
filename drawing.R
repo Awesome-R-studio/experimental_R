@@ -227,9 +227,13 @@ boxText <- function(r, txt, max.cex=NA, min.cex=NA, margin=0.1){
 ## there are a whole load of things, but these generally markdown / latex / html
 ## output, rather than simply drawing a tabe using the plot functions..
 ## say we would like to plot a table,,
-## this is still a bit messy, but it works OK. 
-plotTable <- function(x, y, df, c.widths=NULL, num.format=NA, row.margin=1, col.margin=0.1, doPlot=TRUE,
-                      row.bg=NA, column.bg=NA, ...){
+## this is still a bit messy, but it works OK.
+## if we wish to have seperate justification for individual columns, then
+## we need to draw each column seperately as we cannot specify adj as a list of vectors?
+plotTable <- function(x, y, df, c.widths=NULL, num.format=NA,
+                      row.margin=1, col.margin=0.1, doPlot=TRUE,
+                      row.bg=NA, column.bg=NA, cell.bg=NA,
+                      ...){
     df.m <- as.matrix(df)
     if(length(num.format) > 1 || !is.na(num.format)){
         for(i in 1:ncol(df)){
@@ -263,6 +267,7 @@ plotTable <- function(x, y, df, c.widths=NULL, num.format=NA, row.margin=1, col.
     
     ## redo these so that we can have a matrix of each positions.
     y.top.m <- matrix( rep(y.top, ncol(df.m)), nrow=length(y.top) )
+    y.bot.m <- matrix( rep(y.bot, ncol(df.m)), nrow=length(y.bot) )
     x.left.m <- matrix( rep(x.left, nrow(df.m)), ncol=length(x.left), byrow=TRUE )
     
     ## then simply,,
@@ -271,6 +276,8 @@ plotTable <- function(x, y, df, c.widths=NULL, num.format=NA, row.margin=1, col.
             rect( x.left[1], y.bot, rev(x.right)[1], y.top, col=row.bg, border=NA )
         if(length(column.bg) > 1 || !is.na(column.bg))
             rect( x.left, rev(y.bot)[1], x.right, y.top[1], col=column.bg, border=NA )
+        if(is.matrix(cell.bg) && nrow(cell.bg) == nrow(df.m) && ncol(cell.bg) == ncol(df.m))
+            rect( x.left.m, y.bot.m, x.left.m + c.widths, y.bot.m + r.heights, col=cell.bg, border=NA )
         text( x.left.m + h.margin, y.top.m - v.margin, df.m, adj=c(0,1), ... )
     }
     invisible( list('r'=x.right, 'l'=x.left, 't'=y.top, 'b'=y.bot) )
@@ -310,17 +317,22 @@ sub.table <- table[ , c('Species', 'Cell_type', 'Generation', 'Feed', 'Reads_all
 ## the plot width. But whatever,,
 ## we have 61 rows and 7 columns..
 col.widths <- c(10, 7.5, 5, 10, 10, 5, 5)
-num.format <- c(NA, NA, NA, NA, '%.2e', NA, '%.2f')
+## note that the legality of '%05.2.f' seems to be questionable. Might be undefined behaviour.
+num.format <- c(NA, NA, NA, NA, '%.2e', NA, '%05.2f')
 plot(1, type='n', xlim=c(0,sum(col.widths)), ylim=c(0,200), axes=FALSE, xlab='', ylab='')
 plotTable( 0, 200, sub.table, c.widths=col.widths, num.format=num.format, margin=0.5, cex=0.75 )
 
 o <- with(sub.table, order( Cell_type, Generation, Feed ))
 
+pdf('table_example.pdf', width=7, height=14, title='A table from R core functions')
+par(mar=c(0.1, 0.1, 0.1, 0.1))
 plot(1, type='n', xlim=c(0,sum(col.widths)), ylim=c(0,200), axes=FALSE, xlab='', ylab='')
-p.pos <- plotTable( 0, 200, sub.table[o,], num.format=num.format, col.margin=0.5, row.margin=1.2, cex=0.8, family='sans',
+p.pos <- plotTable( 0, 200, sub.table[o,], num.format=num.format, col.margin=0.75, row.margin=1.2, cex=0.8, family='sans',
 #                   column.bg=c(rgb(0.5,0.5,0.5,0.5), rgb(0.9, 0.9, 0.9, 0.5)),
                    row.bg=c(rgb(0.5,0.5,0.5,0.5), rgb(0.9, 0.9, 0.9, 0.5)) )
 segments( p.pos$l[-1], rev(p.pos$b)[1], p.pos$l[-1], p.pos$t[1], lty=2 )
+dev.off()
+
 
 segments( rep(p.pos$l[1], length(p.pos$t)), p.pos$b, rep(rev(p.pos$r)[1], length(p.pos$t)), p.pos$b )
 
