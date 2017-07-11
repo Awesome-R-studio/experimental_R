@@ -5,6 +5,8 @@ arcPoints <- function( x, y, r, a.beg, a.end, a.n=20, degrees=FALSE){
         a.beg <- pi * a.beg / 180
         a.end <- pi * a.end / 180
     }
+    if(a.end < a.beg)
+        a.end <- a.end + 2 * pi
         
     angles <- seq(a.beg, a.end, length.out=a.n)
     a.x <- x + sin( angles ) * r
@@ -16,6 +18,7 @@ arcPoints <- function( x, y, r, a.beg, a.end, a.n=20, degrees=FALSE){
 
 ## draw an arc, as a line
 ## centered on x,y, and with radius of r+depth and r-depth..
+## the angles should not be less than -pi though, more are possible.. 
 lineArc <- function(x, y, r, a.beg, a.end, a.sep=NA, degrees=FALSE, label=NULL, label.col=1, ...){
     ## set the default here... 
     if(is.na(a.sep))
@@ -24,8 +27,12 @@ lineArc <- function(x, y, r, a.beg, a.end, a.sep=NA, degrees=FALSE, label=NULL, 
         a.beg <- pi * a.beg / 180
         a.end <- pi * a.end / 180
     }
+    if(a.beg > a.end)
+        a.end <- a.end + 2 * pi
         
     angles <- seq(a.beg, a.end, by=a.sep)
+    if(angles[ length(angles) ] != a.end )
+        angles <- c(angles, a.end)
     a.x <- x + sin( angles ) * r
     a.y <- y + cos( angles ) * r
 
@@ -40,6 +47,65 @@ lineArc <- function(x, y, r, a.beg, a.end, a.sep=NA, degrees=FALSE, label=NULL, 
     }
 }
 
+rad2pi <- function(r){
+    180 * r/pi
+}
+
+clamp <- function(v, min=-1, max=1){
+    v <- ifelse( v < min, min, v )
+    ifelse( v > max, max, v )
+}
+
+## this wont work with angles that are greater than 2pi..
+## we could do that by making a while loop, but that wouldn't
+## be compatible with vector arithmetic
+internalAngle <- function(a1, a2){
+    a1 <- ifelse( a1 > pi, a1 - 2*pi, a1 )
+    a2 <- ifelse( a2 > pi, a2 - 2*pi, a2 )
+    a <- sort(c(a1, a2))
+    mid.angle <- mean(a)
+    angle <- a[2] - a[1]
+    if( angle > pi){
+        angle <- 2*pi - (a[2]-a[1])
+        a <- rev(a)
+    }
+    if(mid.angle < a[1])
+        mid.angle <- mid.angle + pi
+    return(c('angle'=angle, 'a1'=a[1], 'a2'=a[2], mid=mid.angle ))
+}
+
+## x, y, the center of a circle
+## r radius of the circle
+## the begining and end angles to connect
+connectingArc <- function(x, y, r, a1, a2, draw=TRUE, ...){
+    o1 <- c(x, y)
+    a1.p <- o1 + c( r * sin(a1), r * cos(a1) )
+    a2.p <- o1 + c( r * sin(a2), r * cos(a2) )
+
+    ## the internal angle is needed to determine the location
+    ## of the connecting circle from which the arc is drawn
+    i.a <- internalAngle(a1, a2)  ## c(angle, a1, a2, mid.angle)
+
+    ## the length of the hypotheneuse connecting two tangents
+    ## from the two points specified by a1 and a2
+    h2 <- r / abs(cos( i.a[1]/2 ))
+    r2 <- sqrt( h2^2 - r^2 )
+    o2 <- o1 + c(h2 * sin(i.a[4]), h2 * cos(i.a[4]) )
+
+    b1.a = asin( clamp((a1.p - o2)[1] / r2) )
+    b1.b = acos( clamp((a1.p - o2)[2] / r2) )
+    b1 <- ifelse( b1.a > 0, b1.b, -b1.b )
+    
+    b2.a = asin( clamp((a2.p - o2)[1] / r2) )
+    b2.b = acos( clamp((a2.p - o2)[2] / r2) )
+    b2 <- ifelse( b2.a > 0, b2.b, -b2.b )
+
+    b.i <- internalAngle(b1, b2)
+    if(draw)
+        lineArc( o2[1], o2[2], r2, b.i[2], b.i[3], ... )
+    invisible( c('x'=o2[1], 'y'=o2[2], 'r'=r2, 'a.beg'=b.i[2], 'a.end'=b.i[3]) )
+}
+
 ## draw an arc, as a polygon..
 ## centered on x,y, and with radius of r+depth and r-depth..
 polygArc <- function(x, y, r, depth, a.beg, a.end, a.sep=NA, degrees=FALSE, label=NULL, label.col=1, ...){
@@ -50,6 +116,8 @@ polygArc <- function(x, y, r, depth, a.beg, a.end, a.sep=NA, degrees=FALSE, labe
         a.beg <- pi * a.beg / 180
         a.end <- pi * a.end / 180
     }
+    if(a.beg > a.end)
+        a.end <- a.end + 2 * pi
         
     angles <- seq(a.beg, a.end, by=a.sep)
     a.x <- sin( angles )
@@ -269,6 +337,7 @@ plotTable <- function(x, y, df, c.widths=NULL, num.format=NA,
     y.top.m <- matrix( rep(y.top, ncol(df.m)), nrow=length(y.top) )
     y.bot.m <- matrix( rep(y.bot, ncol(df.m)), nrow=length(y.bot) )
     x.left.m <- matrix( rep(x.left, nrow(df.m)), ncol=length(x.left), byrow=TRUE )
+    c.widths.m <- matrix( rep(c.widths, nrow(df.m)), ncol=length(c.widths), byrow=TRUE )
     
     ## then simply,,
     if(doPlot){
@@ -277,7 +346,7 @@ plotTable <- function(x, y, df, c.widths=NULL, num.format=NA,
         if(length(column.bg) > 1 || !is.na(column.bg))
             rect( x.left, rev(y.bot)[1], x.right, y.top[1], col=column.bg, border=NA )
         if(is.matrix(cell.bg) && nrow(cell.bg) == nrow(df.m) && ncol(cell.bg) == ncol(df.m))
-            rect( x.left.m, y.bot.m, x.left.m + c.widths, y.bot.m + r.heights, col=cell.bg, border=NA )
+            rect( x.left.m, y.bot.m, x.left.m + c.widths.m, y.bot.m + r.heights, col=cell.bg, border=NA )
         text( x.left.m + h.margin, y.top.m - v.margin, df.m, adj=c(0,1), ... )
     }
     invisible( list('r'=x.right, 'l'=x.left, 't'=y.top, 'b'=y.bot) )
@@ -323,13 +392,15 @@ plot(1, type='n', xlim=c(0,sum(col.widths)), ylim=c(0,200), axes=FALSE, xlab='',
 plotTable( 0, 200, sub.table, c.widths=col.widths, num.format=num.format, margin=0.5, cex=0.75 )
 
 o <- with(sub.table, order( Cell_type, Generation, Feed ))
+cell.cols <- matrix(rgb(0, 0, 0, 0), nrow=nrow(sub.table), ncol=ncol(sub.table))
+cell.cols[,4] <- ifelse( sub.table[o,4] == 'Control', rgb(0, 0.4, 0.4, 0.3), rgb(0, 0, 0, 0) )
 
 pdf('table_example.pdf', width=7, height=14, title='A table from R core functions')
 par(mar=c(0.1, 0.1, 0.1, 0.1))
 plot(1, type='n', xlim=c(0,sum(col.widths)), ylim=c(0,200), axes=FALSE, xlab='', ylab='')
 p.pos <- plotTable( 0, 200, sub.table[o,], num.format=num.format, col.margin=0.75, row.margin=1.2, cex=0.8, family='sans',
 #                   column.bg=c(rgb(0.5,0.5,0.5,0.5), rgb(0.9, 0.9, 0.9, 0.5)),
-                   row.bg=c(rgb(0.5,0.5,0.5,0.5), rgb(0.9, 0.9, 0.9, 0.5)) )
+                   row.bg=c(rgb(0.5,0.5,0.5,0.5), rgb(0.9, 0.9, 0.9, 0.5)), cell.bg=cell.cols )
 segments( p.pos$l[-1], rev(p.pos$b)[1], p.pos$l[-1], p.pos$t[1], lty=2 )
 dev.off()
 
@@ -410,4 +481,192 @@ y <- 50 * sin( pi * x/100 )
 pathLetters( x, y, txt, useNormals=TRUE, col='red', cex.adj=1 )
 pathLetters( x, y, txt, useNormals=TRUE, col='brown', cex=1 )
 dev.off()
+
+plot( 1,1, type='n', xlim=c(-200,200), ylim=c(-200,200), xlab='',  ylab='' )
+a <- seq(0, 2*pi, 0.01)
+r <- 60
+lines( r * cos(a), r * sin(a) )
+
+#a2 <- 1.3*pi
+#a1 <- 1.1 * pi # -pi/3 #2*pi
+a1 <- -0.1
+a2 <- 0.1
+lineArc( 0, 0, r, a1, a2, lwd=2, col='green')
+connectingArc( 0, 0, r, a1, a2, col='blue' )
+
+a <- seq(0.1, pi, 0.1)
+a.col <- hsvScale(a)
+for(i in 1:length(a)){
+    a1 <- a[i]
+    a2 <- -a1
+    lineArc( 0, 0, r, a1, a2, lwd=2, col='red')
+    connectingArc( 0, 0, r, a1, a2, col=a.col[i], lwd=1 )
+}
+
+a <- seq(0.1, 2*pi, 0.1)
+a.col <- hsvScale(a)
+for(i in 1:length(a)){
+    a1 <- a[i]
+    a2 <- a1 - 1
+    lineArc( 0, 0, r, a1, a2, lwd=2, col='red')
+    connectingArc( 0, 0, r, a1, a2, col=a.col[i], lwd=1 )
+}
+
+a <- seq(0.1, pi, 0.1)
+a.col <- hsvScale(a)
+for(i in 1:length(a)){
+    a1 <- pi/2 + a[i]
+    a2 <- -a1 #pi/2 - a[i] 
+    lineArc( 0, 0, r, a1, a2, lwd=2, col='red')
+    connectingArc( 0, 0, r, a1, a2, col=a.col[i], lwd=1 )
+}
+
+lineArc( 0, 0, r, 1.8*pi, 0.2*pi, lwd=3, col='blue' )
+
+## a little bit of playing around with circles and connecting paths between different locations.
+plot( 1,1, type='n', xlim=c(-100,100), ylim=c(-100,100), xlab='',  ylab='' )
+a <- seq(0, 2*pi, by=0.01)
+r1 <- 30
+a1 <- -0.6*pi
+a2 <- 0.6*pi
+a1.p <- c( r1 * sin(a1), r1 * cos(a1) )
+a2.p <- c( r1 * sin(a2), r1 * cos(a2) )
+text(a1.p[1], a1.p[2], 'a1', pos=3)
+text(a2.p[1], a2.p[2], 'a2', pos=1)
+lines( r1 * sin(a), r1 * cos(a), lwd=1 )
+lineArc( 0, 0, r1, a1, a2, lwd=3, col='red' )
+lines( c( 0, r1 * sin(a1) ), c(0, r1 * cos(a1)), lty=2 )
+lines( c( 0, r1 * sin(a2) ), c(0, r1 * cos(a2)), lty=2 )
+lines( c( r1 * sin(a1), r1 * sin(a2) ), c(r1 * cos(a1), r1 * cos(a2)), lty=2 )
+
+#lines( c( 0, 2 * r1 * cos(mean(a[a1:a2])) ), c( 0, 2 * r1 * sin(mean(a[a1:a2]))) )
+#a1.p.a2.p.dist <- dist( rbind( a1.p, a2.p ) )[1]
+## if we want to join lines at 90 degrees from the points a1.p and a2.p, then we
+i.a <- internalAngle(a1, a2)
+h2 <- r1 / abs(cos( i.a[1]/2 ))
+r2 <- sqrt( h2^2 - r1^2 )
+o2 <- c(h2 * sin(i.a[4] ), h2 * cos(i.a[4]) )
+lines( c(0, o2[1]), c(0, o2[2]) , col='green', lwd=2 )
+lines( c(a1.p[1], o2[1]), c(a1.p[2], o2[2]), col='brown' )
+lines( c(a2.p[1], o2[1]), c(a2.p[2], o2[2]), col='brown' )
+
+## to the the startin angle here, we can consider that we have a cirle
+## with an origin at o2, and an
+## (a1.p - o2)[1] = r2 * cos(b1)
+## (a1.p - o2)[2] = r2 * sin(b1)
+## in other words, angle b1 is
+b1.a = asin( (a1.p - o2)[1] / r2 )
+b1.b = acos( (a1.p - o2)[2] / r2 )
+b1 <- ifelse( b1.a > 0, b1.b, 2*pi -b1.b )
+
+b2.a = asin( (a2.p - o2)[1] / r2 )
+b2.b = acos( (a2.p - o2)[2] / r2 )
+b2 <- ifelse( b2.a > 0, b2.b, 2 * pi-b2.b )
+
+lineArc( o2[1], o2[2], r2, b1, b2, lwd=2, col='cyan' )
+
+
+a1 <- 0.2*pi
+a2 <- 0.5*pi
+a1.p <- c( r1 * sin(a1), r1 * cos(a1) )
+a2.p <- c( r1 * sin(a2), r1 * cos(a2) )
+
+lines( c( 0, r1 * sin(a1) ), c(0, r1 * cos(a1)), lty=2 )
+lines( c( 0, r1 * sin(a2) ), c(0, r1 * cos(a2)), lty=2 )
+lines( c( r1 * sin(a1), r1 * sin(a2) ), c(r1 * cos(a1), r1 * cos(a2)), lty=2 )
+
+i.a <- internalAngle(a1, a2)
+h2 <- r1 / abs(cos( i.a[1]/2 ))
+r2 <- sqrt( h2^2 - r1^2 )
+o2 <- c(h2 * sin(i.a[4] ), h2 * cos(i.a[4]) )
+lines( c(0, o2[1]), c(0, o2[2]) , col='green', lwd=2 )
+lines( c(a1.p[1], o2[1]), c(a1.p[2], o2[2]), col='brown' )
+lines( c(a2.p[1], o2[1]), c(a2.p[2], o2[2]), col='brown' )
+
+## to the the startin angle here, we can consider that we have a cirle
+## with an origin at o2, and an
+## (a1.p - o2)[1] = r2 * cos(b1)
+## (a1.p - o2)[2] = r2 * sin(b1)
+## in other words, angle b1 is
+b1.a = asin( (a1.p - o2)[1] / r2 )
+b1.b = acos( (a1.p - o2)[2] / r2 )
+b1 <- ifelse( b1.a > 0, b1.b, 2*pi -b1.b )
+
+b2.a = asin( clamp((a2.p - o2)[1] / r2) )
+b2.b = acos( clamp((a2.p - o2)[2] / r2) )
+b2 <- ifelse( b2.a > 0, b2.b, 2 * pi-b2.b )
+
+b.i <- internalAngle(b1, b2)
+lineArc( o2[1], o2[2], r2, b.i[2], b.i[3], lwd=2, col='cyan' )
+lineArc( o2[1], o2[2], r2, b1, b2, lwd=2, col='cyan' )
+
+
+
+
+
+r1 <- 30
+a1 <- 270
+a2 <- 500
+a1.p <- c( r1 * sin(a[a1]), r1 * cos(a[a1]) )
+a2.p <- c( r1 * sin(a[a2]), r1 * cos(a[a2]) )
+lines( r1 * sin(a), r1 * cos(a), lwd=1 )
+lines( r1 * sin(a[a1:a2]), r1 * cos(a[a1:a2]), lwd=5, col='blue' )
+lines( c( 0, r1 * sin(a[a1]) ), c(0, r1 * cos(a[a1])), lty=2 )
+lines( c( 0, r1 * sin(a[a2]) ), c(0, r1 * cos(a[a2])), lty=2 )
+lines( c( r1 * sin(a[a1]), r1 * sin(a[a2]) ), c(r1 * cos(a[a1]), r1 * cos(a[a2])), lty=2 )
+## if we want to join lines at 90 degrees from the points a1.p and a2.p, then we
+h2 <- r1 / abs(cos( (a[a2] - a[a1])/2 ))
+r2 <- sqrt( h2^2 - r1^2 )
+o2 <- c(h2 * sin((a[a1] + a[a2])/2), h2 * cos((a[a1] + a[a2])/2) )
+lines( c(0, o2[1]), c(0, o2[2]) , col='green', lwd=2 )
+lines( c(a1.p[1], o2[1]), c(a1.p[2], o2[2]), col='brown' )
+lines( c(a2.p[1], o2[1]), c(a2.p[2], o2[2]), col='brown' )
+
+## to the the startin angle here, we can consider that we have a cirle
+## with an origin at o2, and an
+## (a1.p - o2)[1] = r2 * cos(b1)
+## (a1.p - o2)[2] = r2 * sin(b1)
+## in other words, angle b1 is
+b1.a = asin( (a1.p - o2)[1] / r2 )
+b1.b = acos( (a1.p - o2)[2] / r2 )
+b1 <- ifelse( b1.a > 0, b1.b, 2*pi -b1.b )
+
+b2.a = asin( (a2.p - o2)[1] / r2 )
+b2.b = acos( (a2.p - o2)[2] / r2 )
+b2 <- ifelse( b2.a > 0, b2.b, 2*pi -b2.b )
+
+lineArc( o2[1], o2[2], r2, b1, b2, lwd=2, col='red' )
+
+r1 <- 30
+a1 <- 540
+a2 <- 580
+a1.p <- c( r1 * sin(a[a1]), r1 * cos(a[a1]) )
+a2.p <- c( r1 * sin(a[a2]), r1 * cos(a[a2]) )
+lines( r1 * sin(a), r1 * cos(a), lwd=1 )
+lines( r1 * sin(a[a1:a2]), r1 * cos(a[a1:a2]), lwd=5, col='blue' )
+lines( c( 0, r1 * sin(a[a1]) ), c(0, r1 * cos(a[a1])), lty=2 )
+lines( c( 0, r1 * sin(a[a2]) ), c(0, r1 * cos(a[a2])), lty=2 )
+lines( c( r1 * sin(a[a1]), r1 * sin(a[a2]) ), c(r1 * cos(a[a1]), r1 * cos(a[a2])), lty=2 )
+## if we want to join lines at 90 degrees from the points a1.p and a2.p, then we
+h2 <- r1 / abs(cos( (a[a2] - a[a1])/2 ))
+r2 <- sqrt( h2^2 - r1^2 )
+o2 <- c(h2 * sin((a[a1] + a[a2])/2), h2 * cos((a[a1] + a[a2])/2) )
+lines( c(0, o2[1]), c(0, o2[2]) , col='green', lwd=2 )
+lines( c(a1.p[1], o2[1]), c(a1.p[2], o2[2]), col='brown' )
+lines( c(a2.p[1], o2[1]), c(a2.p[2], o2[2]), col='brown' )
+
+## to the the startin angle here, we can consider that we have a cirle
+## with an origin at o2, and an
+## (a1.p - o2)[1] = r2 * cos(b1)
+## (a1.p - o2)[2] = r2 * sin(b1)
+## in other words, angle b1 is
+b1.a = asin( (a1.p - o2)[1] / r2 )
+b1.b = acos( (a1.p - o2)[2] / r2 )
+b1 <- ifelse( b1.a > 0, b1.b, 2*pi -b1.b )
+
+b2.a = asin( (a2.p - o2)[1] / r2 )
+b2.b = acos( (a2.p - o2)[2] / r2 )
+b2 <- ifelse( b2.a > 0, b2.b, 2*pi -b2.b )
+
+lineArc( o2[1], o2[2], r2, b1, b2, lwd=2, col='red' )
 
