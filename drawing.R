@@ -139,6 +139,24 @@ polygArc <- function(x, y, r, depth, a.beg, a.end, a.sep=NA, degrees=FALSE, labe
     }
 }
 
+## the first and last points are taken as anchored points
+## the amount of distortion on any point is a function of its distance
+## from either of these points along the curve specified by the points
+## pts is a matrix containing two columns giving the x and y positions of the
+## points
+anchoredDistort <- function( pts, dist.v ){
+    x.diff <- diff( pts[,1] )
+    y.diff <- diff( pts[,2] )
+    dists <- sqrt( x.diff^2 + y.diff^2 ) 
+    fwd.dist <- c(0, cumsum( dists ))
+    rev.dist <- rev(c(0, cumsum( rev(dists) )))
+    a.dist <- sqrt( fwd.dist * rev.dist )
+    ## and then simply take,,
+    pts[,1] <- pts[,1] + dist.v[1] * (a.dist / max(a.dist))
+    pts[,2] <- pts[,2] + dist.v[2] * (a.dist / max(a.dist))
+    pts
+}
+
 ## x is taken as positions along an arc running from angle, a.beg to a.end
 plotPolar <- function(o.x, o.y, x, y, r, y.depth, a.beg, a.end, degrees=FALSE, drawBorders=TRUE, drawCenter=TRUE, ...){
     if( degrees ){
@@ -484,7 +502,7 @@ dev.off()
 
 plot( 1,1, type='n', xlim=c(-200,200), ylim=c(-200,200), xlab='',  ylab='' )
 a <- seq(0, 2*pi, 0.01)
-r <- 60
+r <- 120
 lines( r * cos(a), r * sin(a) )
 
 #a2 <- 1.3*pi
@@ -516,12 +534,22 @@ a <- seq(0.1, pi, 0.1)
 a.col <- hsvScale(a)
 for(i in 1:length(a)){
     a1 <- pi/2 + a[i]
-    a2 <- -a1 #pi/2 - a[i] 
-    lineArc( 0, 0, r, a1, a2, lwd=2, col='red')
+    a2 <- pi/2 - a[i] 
+#    lineArc( 0, 0, r, a1, a2, lwd=2, col='red')
     connectingArc( 0, 0, r, a1, a2, col=a.col[i], lwd=1 )
 }
 
 lineArc( 0, 0, r, 1.8*pi, 0.2*pi, lwd=3, col='blue' )
+
+plot( 1,1, type='n', xlim=c(-200,200), ylim=c(-200,200), xlab='',  ylab='' )
+a <- seq(0, 2*pi, 0.01)
+r <- 120
+lines( r * cos(a), r * sin(a) )
+
+pts <- arcPoints( 0, 0, 90, 0.3*pi, 0.75*pi, a.n=100 )
+pts.distorted <- anchoredDistort( pts, c(0, -100) )
+lines( pts[,1], pts[,2], col='red' )
+lines( pts.distorted[,1], pts.distorted[,2], col='green', type='b', cex=0.5 )
 
 ## a little bit of playing around with circles and connecting paths between different locations.
 plot( 1,1, type='n', xlim=c(-100,100), ylim=c(-100,100), xlab='',  ylab='' )
