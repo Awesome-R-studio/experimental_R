@@ -1,6 +1,6 @@
 ## return the points of an arc centered on x, y, from a.beg to a.end and with a radious
 ## of r
-arcPoints <- function( x, y, r, a.beg, a.end, a.n=20, degrees=FALSE){
+arcPoints <- function( x, y, r, a.beg, a.end, a.sep=0.01, a.n=(a.end-a.beg)/a.sep, degrees=FALSE){
     if( degrees ){
         a.beg <- pi * a.beg / 180
         a.end <- pi * a.end / 180
@@ -8,7 +8,10 @@ arcPoints <- function( x, y, r, a.beg, a.end, a.n=20, degrees=FALSE){
     if(a.end < a.beg)
         a.end <- a.end + 2 * pi
         
-    angles <- seq(a.beg, a.end, length.out=a.n)
+    angles <- seq(a.beg, a.end, a.sep)
+    if( angles[ length(angles) ] != a.end )
+        angles <- c(angles, a.end)
+    
     a.x <- x + sin( angles ) * r
     a.y <- y + cos( angles ) * r
     pts <- matrix( c(a.x, a.y), ncol=2 )
@@ -108,7 +111,7 @@ connectingArc <- function(x, y, r, a1, a2, draw=TRUE, ...){
 
 ## draw an arc, as a polygon..
 ## centered on x,y, and with radius of r+depth and r-depth..
-polygArc <- function(x, y, r, depth, a.beg, a.end, a.sep=NA, degrees=FALSE, label=NULL, label.col=1, ...){
+polygArc <- function(x, y, r, depth, a.beg, a.end, a.sep=NA, degrees=FALSE, label=NULL, label.col=1, label.cex=1, ...){
     ## set the default here... 
     if(is.na(a.sep))
         a.sep = 0.01
@@ -135,7 +138,7 @@ polygArc <- function(x, y, r, depth, a.beg, a.end, a.sep=NA, degrees=FALSE, labe
         ## but the rotation angle we need for the text needs to be in degrees
         rot.a <- -180 * mid.a / pi
         text( x + sin( mid.a ) * r, y + cos( mid.a ) * r,
-              label, srt=rot.a, col=label.col )
+              label, srt=rot.a, col=label.col, cex=label.cex )
     }
 }
 
