@@ -123,6 +123,9 @@ polygArc <- function(x, y, r, depth, a.beg, a.end, a.sep=NA, degrees=FALSE, labe
         a.end <- a.end + 2 * pi
         
     angles <- seq(a.beg, a.end, by=a.sep)
+    if(angles[length(angles)] != a.end)
+        angles <- c(angles, a.end)
+    
     a.x <- sin( angles )
     a.y <- cos( angles )
     outer.x <- x + (a.x * (r + depth/2))
@@ -135,6 +138,7 @@ polygArc <- function(x, y, r, depth, a.beg, a.end, a.sep=NA, degrees=FALSE, labe
 
     if(!is.null(label)){
         mid.a <- (a.beg + a.end)/2
+
         ## but the rotation angle we need for the text needs to be in degrees
         rot.a <- -180 * mid.a / pi
         text( x + sin( mid.a ) * r, y + cos( mid.a ) * r,
