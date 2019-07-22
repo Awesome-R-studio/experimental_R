@@ -241,6 +241,7 @@ pathLetters <- function( x, y, word, cex=NA, cex.adj=0.75, useNormals=FALSE, ...
 ## returns the string with newlines added and width and height
 ## required
 usrStrWrap <- function(w, txt, ...){
+    txt <- as.character(txt)
     words <- unlist(strsplit(txt, ' |\t'))
     current.line = words[1]
     txt.f <- current.line
@@ -263,7 +264,8 @@ usrStrWrap <- function(w, txt, ...){
 ## this function seems to work OK, but is really rather messy.. 
 ## note that I could probably use strwrap here; but that wraps on
 ## columns.. 
-boxText <- function(r, txt, max.cex=NA, min.cex=NA, margin=0.1){
+boxText <- function(r, txt, max.cex=NA, min.cex=NA, margin=0.1, ...){
+    r <- as.numeric(r)
     w = r[2] - r[1]
     h = r[4] - r[3]
     ## split the txt into words
@@ -311,7 +313,9 @@ boxText <- function(r, txt, max.cex=NA, min.cex=NA, margin=0.1){
     ## simply scale the cex appropriately
     max.r <- max( c(txt.width.r, txt.height.r) )
     cex <- par("cex") / max.r
-    text( r[1] + w * margin/2, mean(r[3:4]), txt.prt, cex=cex, adj=c(0,0.5) )
+    if(!is.na(max.cex)) cex <- min(cex, max.cex)
+    if(!is.na(min.cex)) cex <- max(cex, min.cex)
+    text( r[1] + w * margin/2, mean(r[3:4]), txt.prt, cex=cex, adj=c(0,0.5), ... )
     invisible(cex)
 }
 
@@ -325,32 +329,48 @@ boxText <- function(r, txt, max.cex=NA, min.cex=NA, margin=0.1){
 ## we need to draw each column seperately as we cannot specify adj as a list of vectors?
 plotTable <- function(x, y, df, c.widths=NULL, num.format=NA,
                       row.margin=1, col.margin=0.1, doPlot=TRUE,
-                      row.bg=NA, column.bg=NA, cell.bg=NA,
+                      row.bg=NA, column.bg=NA, cell.bg=NA, text.col=1,
+                      text.adj=c(0,1),
                       ...){
     df.m <- as.matrix(df)
     if(length(num.format) > 1 || !is.na(num.format)){
+#        num.count <- 0
         for(i in 1:ncol(df)){
-            if(is.numeric(df[,i]))
+            if(is.numeric(df[,i])){
                 df.m[,i] <- sprintf(num.format[ 1 + (i-1) %% length(num.format) ], df[,i])
+                ##num.count <- num.count + 1
+            }
         }
     }
     if(is.null(c.widths)){
         c.widths <- (apply( df.m, 2, function(x){ max( strwidth(x, ...) ) } ))
     }
     ## determine r.heights using the usrStrWrap function
-    r.heights <- apply( df.m, 1,
-                       function(x){
-                           x.f <- vector(mode='list', length=length(x))
-                           for(i in 1:length(x))
-                               x.f[[i]] <- usrStrWrap( c.widths[i], x[i], ... )
-                           max( sapply(x.f, function(y){ y$h } ) )
-                       })
+    ## but this cannot wrap the actual text as it uses apply, which cannot
+    ## modify the df.m..
+    r.heights <- vector(mode='numeric', length=nrow(df.m ))
+    for(i in 1:length(r.heights)){
+        x.f <- vector(mode='list', length=ncol(df.m))
+        for(j in 1:length(x.f))
+            x.f[[j]] <- usrStrWrap( c.widths[j], df.m[i,j], ... )
+        r.heights[i] <- max( sapply(x.f, function(y){ y$h } ) )
+        df.m[i,] <- sapply( x.f, function(y){ y$s })
+    }
+        
+    ## r.heights <- apply( df.m, 1,
+    ##                    function(x){
+    ##                        x.f <- vector(mode='list', length=length(x))
+    ##                        for(i in 1:length(x))
+    ##                            x.f[[i]] <- usrStrWrap( c.widths[i], x[i], ... )
+    ##                        max( sapply(x.f, function(y){ y$h } ) )
+    ##                    })
     
-    v.margin <- mean( r.heights ) * row.margin/2
-    r.heights <- r.heights * (1 + row.margin)
+    v.margin <- min( r.heights ) * row.margin/2
+    r.heights <- r.heights + (v.margin) * min(r.heights)
 
-    h.margin <- mean( c.widths ) * col.margin / 2
-    c.widths <- c.widths + mean( c.widths ) * col.margin
+    h.margin <- min( c.widths ) * col.margin
+    c.widths <- c.widths + h.margin
+#    c.widths <- c.widths + mean( c.widths ) * col.margin
 ### then we know where to place things, starting at the top and using adj=c(0,1)
 ### 
     y.bot <- y - cumsum(r.heights)
@@ -372,7 +392,89 @@ plotTable <- function(x, y, df, c.widths=NULL, num.format=NA,
             rect( x.left, rev(y.bot)[1], x.right, y.top[1], col=column.bg, border=NA )
         if(is.matrix(cell.bg) && nrow(cell.bg) == nrow(df.m) && ncol(cell.bg) == ncol(df.m))
             rect( x.left.m, y.bot.m, x.left.m + c.widths.m, y.bot.m + r.heights, col=cell.bg, border=NA )
-        text( x.left.m + h.margin, y.top.m - v.margin, df.m, adj=c(0,1), ... )
+        text( x.left.m + h.margin/2, y.top.m - v.margin, df.m, adj=text.adj, col=text.col, ... )
     }
     invisible( list('r'=x.right, 'l'=x.left, 't'=y.top, 'b'=y.bot) )
+}
+
+
+## A rotate function
+rotate.pts <- function(pts, a=pi/2, origin=apply(pts, 2, function(x){mean(range(x))}), preserve.aspect=FALSE){
+    rot=matrix(c(cos(a), -sin(a), sin(a), cos(a)), nrow=2, byrow=TRUE)
+    tfd <-t( t(pts) - origin)
+    if(!preserve.aspect){
+        tfd <- tfd %*% rot
+    }else{
+        ## the amount of device space used per x..
+        asp <- with(par(), (pin[1]/pin[2]) / (diff(usr[1:2])/diff(usr[3:4])) )
+        tfd[,1] <- tfd[,1] * asp
+        tfd <- tfd %*% rot
+        tfd[,1] <- tfd[,1] / asp
+    }
+    tfd <- t( t(tfd) + origin )
+    colnames(tfd) <- colnames(pts)
+    tfd
+}
+
+scale.pts <- function(pts, x.scale, y.scale=x.scale, origin=colMeans(pts)){
+    tfd <- t( t(pts) - origin)
+    colnames(tfd) <- colnames(pts)
+    tfd[,1] <- tfd[,1] * x.scale
+    tfd[,2] <- tfd[,2] * y.scale
+    t( t(tfd) + origin )
+}
+
+translate.pts <- function(pts, x, y){
+    t( t(pts) + c(x,y) )
+}
+
+### A somewhat prettier arrow than the usual one
+### makes an upward pointing arrow
+### scale by aspect ?
+### by pointing upwards, the arrow width is defined by
+### x coordinates, whereas the length is by y-coordinates
+arrow.x2.pts <- function(a.l, a.w, ah.l=0.2*a.l, ah.w=3*a.w, p.n=30){
+    x1 <- seq(-3, 0, length.out=p.n)
+    y1 <- (4 + x1)^2
+    y1 <- y1 - min(y1)
+    x2 <- seq(-3, min(x1) * a.w/ah.w, length.out=p.n)
+    y2 <- ((4+x2)*0.5)^2
+    y2 <- y2 - min(y2)
+
+    c.w <- max(abs(x1)) * 2 ## current width
+    x1 <- x1 * ah.w / c.w
+    x2 <- x2 * ah.w / c.w
+
+    c.h <- max(y1)
+    y1 <- y1 * ah.l / c.h
+    y2 <- y2 * ah.l / c.h
+    
+    x <- c(rev(x1), x2, -a.w/2, 0)
+    y.min <- max(y1) - a.l
+    y <- c(rev(y1), y2, y.min, y.min)
+    x <- c(x, -rev(x))
+    y <- c(y, rev(y))
+    y <- y - min(y)
+    cbind('x'=x, 'y'=y)
+}
+
+## 
+arrow.x2 <- function(x1, y1, x2, y2, a.w, ah.w, ah.l, ah.l.prop=(ah.l < 1), p.n=30,
+                     preserve.aspect=TRUE){
+    asp <- ifelse( preserve.aspect,
+                  with(par(), (pin[1]/pin[2]) / (diff(usr[1:2])/diff(usr[3:4])) ),
+                  1)
+    l <- sqrt( (asp * (x2-x1))^2 + (y2-y1)^2 )
+    ## I suspect that there should be a better way of getting the angle,
+    ## but I don't know it... (maybe using complex numbers would do it?)
+    a1 <- asin( asp*(x2-x1) / l )
+    a2 <- acos( (y2-y1) / l )
+    a <- ifelse( a1 > 0, a2, 2 * pi - a2 )
+    if(ah.l.prop)
+        ah.l <- l * ah.l
+    pts <- arrow.x2.pts(l, a.w, ah.l, ah.w, p.n)
+    pts[,2] <- pts[,2] - max(pts[,2])
+    pts <- rotate.pts(pts, a, origin=c(0, 0), preserve.aspect=preserve.aspect)
+    pts <- translate.pts(pts, x2, y2)
+    pts
 }

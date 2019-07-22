@@ -95,19 +95,20 @@ plotPolar(0, 0, measure.x, measure.y, m.r, m.w, 0, 2*pi, col=hsvScale(1:length(m
 dev.off()
 
 ### we can also do something a bit silly,,,
-### and draw pie-charts when we want to.. with offsets pies.. 
+### and draw pie-charts when we want to.. with offsets pies..
+pdf("silly_pie_plot.pdf", width=7, height=7, title='Silly pie plots')
 plot( 1, type='n', axes=FALSE, xlim=c(-fig.r,fig.r), ylim=c(-fig.r,fig.r), xlab='', ylab='' )
 polygArc(0, 0, 25, 50, 0, pi/3, degrees=FALSE, col='red' )
-polygArc( 2 * sin( (pi/3 + 2.5*pi/3)/2), 2 * cos( (pi/3 + 2.5*pi/3)/2 ), 25, 50, pi/3, 2.5 * pi/3, degrees=FALSE, col='green' )
+for(i in seq(2, 40, by=4)){
+    polygArc( i * sin( (pi/3 + 2.5*pi/3)/2), i * cos( (pi/3 + 2.5*pi/3)/2 ), 25, 50, pi/3, 2.5 * pi/3, degrees=FALSE, col=hsv(0.3, i/40, 0.8) )
+}
 polygArc(0, 0, 25, 50, 2.5*pi/3, 1.2 * pi, degrees=FALSE, col='blue' )
 polygArc(0, 0, 25, 50, 1.2 * pi, 1.7 * pi, degrees=FALSE, col='grey' )
 polygArc(0, 0, 25, 50, 1.7 * pi, 2*pi, degrees=FALSE, col='cyan' )
-
+## some segments.. 
 polygArc(-75, 50, 25, 10, 0, 2*pi, col='blue', border=NA)
-
-## but can we do..
 polygArc(-75, 50, 25, 10, -pi/2, pi/2, col='green', border=NA)
-
+dev.off()
 
 ## lets draw letters on a set of points. First let us take our string...
 pdf("text_along_paths.pdf", width=7, height=7, title='Text along paths')
@@ -128,6 +129,28 @@ y <- 50 * sin( pi * x/100 )
 pathLetters( x, y, txt, useNormals=TRUE, col='red', cex.adj=1 )
 pathLetters( x, y, txt, useNormals=TRUE, col='brown', cex=1 )
 dev.off()
+
+comp <- c('A'='T', 'C'='G', 'G'='C', 'T'='A')
+txt <- sample(c('A', 'C', 'G', 'T'), 100, replace=TRUE )
+txt[81:100] <- comp[ txt[20:1] ]
+txt <- paste(txt, collapse='')
+                   
+txt.points <- cbind('x'=1:100, 'y'=rep(10, 100) )
+
+radius = 60 / (2 * pi)
+txt.points[21:80,] <- arcPoints( 20.5 + radius, 9.5, (60 / (2 * pi)),  1.5 * pi + (1/60) * 2*pi, 1.5 * pi + (59/60) * 2 * pi, a.n=60 )
+txt.points[81:100,'x'] <- rev( txt.points[1:20, 'x'] )
+txt.points[81:100,'y'] <- rep( 9, 20 )
+
+plot(txt.points[,'x'], txt.points[,'y'] )
+
+pdf("hairpin.pdf", width=7, height=7, title='Hairpin')
+par(mar=c(0,0,0,0))
+plot(1, 1, axes=FALSE, type='n', xlab='', ylab='', xlim=c(0,40), ylim=c(-9,30) )
+#points(txt.points[,'x'], txt.points[,'y'] )
+pathLetters( txt.points[,'x'], txt.points[,'y'], txt, useNormals=TRUE, col='brown', cex.adj=0.9 )
+dev.off()
+
 
 plot( 1,1, type='n', xlim=c(-200,200), ylim=c(-200,200), xlab='',  ylab='' )
 a <- seq(0, 2*pi, 0.01)
@@ -336,4 +359,159 @@ b2.b = acos( (a2.p - o2)[2] / r2 )
 b2 <- ifelse( b2.a > 0, b2.b, 2*pi -b2.b )
 
 lineArc( o2[1], o2[2], r2, b1, b2, lwd=2, col='red' )
+
+
+## lets experiment with drawing an arrow..
+plot(1,1, type='n', xlim=c(-10, 10), ylim=c(-20, 20), xlab='', ylab='' )
+grid()
+x1 <- seq(-3, 0, length.out=30)
+y1 <- (4 + x1)^2
+y1 <- y1 - min(y1)
+lines(x1, y1)
+x2 <- seq(-3, -0.5, length.out=30)
+y2 <- ((4+x2)*0.5)^2
+y2 <- y2 - min(y2)
+lines(x2, y2, col='red')
+
+x <- c(rev(x1), x2, -0.5, -0.5, 0)
+y <- c(rev(y1), y2, max(y2), -20, -20)
+lines(x, y)
+
+x <- c(x, -rev(x))
+y <- c(y, rev(y))
+lines(x,y)
+
+polygon(x, y, border=NA, col=rgb(0.5, 0.5, 0))
+pts <- cbind(x, y)
+pts.2 <- rotate.pts(pts, a=pi)
+polygon(pts.2, border=NA, col=rgb(0, 0.5, 0.5))
+
+plot(1,1, type='n', xlim=c(-10, 10), ylim=c(-20, 20), xlab='', ylab='', asp=1 )
+grid()
+polygon(pts, border=NA, col=rgb(0.5, 0.5, 0))
+
+
+pts.2 <- rotate.pts(pts, a=pi/2, origin=c(0,-20) )
+polygon(pts.2, border=NA, col=rgb(0, 0.5, 0.5))
+
+pts.3 <- scale.points( pts, 0.2 )
+polygon(pts.3, border=NA, col='red')
+
+pts.3[,2] <- pts.3[,2] - min(pts.3[,2])
+polygon(pts.3, border=NA, col='green')
+
+sapply( seq(0, 2*pi, length.out=30), function(a){
+    p <- rotate.pts( pts.3, a, origin=c(0,0) )
+    polygon(p, border=NA, col=rgb(a/(2*pi), 0, 1-a/(2*pi)) )
+    invisible(1)
+})
+
+plot(1,1, type='n', xlim=c(-10, 10), ylim=c(-20, 20), xlab='', ylab='' )
+grid()
+polygon(pts, border=NA, col=rgb(0.5, 0.5, 0))
+
+polygon(pts.2)
+pts.4 <- rotate.pts( pts, a=pi/4)
+## pts.2 has lost changed it's dimensions due to the current aspect ratio
+## can we fix this by scaling
+polygon(pts.4)
+
+## do some simple things
+plot(1,1, type='n', xlim=c(-10, 10), ylim=c(-20, 20), xlab='', ylab='' )
+grid()
+
+pts.5 <- rbind(c(0,0), c(-5,10))
+lines(pts.5)
+invisible(sapply(seq(0, 2*pi, length.out=200), function(a){ lines( rotate.pts(pts.5, a=a, origin=c(0,0)) )}))
+
+pts.6 <- lapply(seq(0, 2*pi, length.out=200), function(a){ rotate.pts(pts.5, a=a, origin=c(0,0), preserve.aspect=TRUE) })
+invisible(sapply(pts.6, lines, col='blue', lwd=2))
+
+plot(1,1, type='n', xlim=c(-10, 10), ylim=c(-20, 20), xlab='', ylab='' )
+grid()
+pts.5 <- cbind(c(-5,5,5,-5), c(5,5,-5,-5))
+polygon(pts.5)
+
+pts.6 <- rotate.pts(pts.5, a=pi/4, origin=c(0,0))
+pts.7 <- rotate.pts(pts.5, a=pi/4, origin=c(0,0), preserve.aspect=TRUE)
+polygon(pts.6, border='blue', lwd=2)
+polygon(pts.7, border='red', lwd=2)
+
+plot(1,1, type='n', xlim=c(-10, 10), ylim=c(-20, 20), xlab='', ylab='' )
+grid()
+polygon(pts, col=rgb(0.4, 0, 0.7, 0.5))
+#pts.7 <- rotate.pts( pts, a=pi/2, origin=c(0,0), preserve.aspect=TRUE )
+pts.7 <- rotate.pts( pts, a=pi/2, preserve.aspect=TRUE )
+polygon(pts.7, col=rgb(0, 0.5, 0.7, 0.5))
+
+pts.8 <- scale.points(pts, 0.2)
+polygon(pts.8, col=rgb(0.8, 0.5, 0.3), border=NA)
+pts.8 <- translate.points(pts.8, -5, -5)
+polygon(pts.8, col=rgb(0.8, 0.5, 0.3), border=NA)
+invisible( sapply(seq(0, 2*pi, length.out=16), function(a){ polygon( rotate.pts( pts.8, a, preserve.aspect=TRUE ), col='blue') }))
+
+
+## test out presentation in R...
+source("presentation.R")
+
+pdevs <- setup.devices(pdf.name="pres2")
+
+plot.new()
+plot.window(xlim=c(0,1024), ylim=c(0,768))
+#pts <- translate.pts(pts, 500, 350)
+#pts <- scale.pts(pts, 4)
+polygon(pts, col=rgb(0.4, 0.5, 0.1), border=NA)
+#pts <- translate.pts(pts, -500, -350)
+#polygon(pts, col=rgb(0.4, 0.5, 0.1), border=NA)
+#pts <- scale.pts(pts, 0.25)
+#polygon(pts, col=rgb(0.9, 0.5, 0.1), border=NA)
+
+sapply(seq(0, 2*pi, length.out=36), function(a){
+    polygon( rotate.pts(pts, a=a), border=NA, col=rgb(a/(2*pi), 0, 1-(a/(2*pi)))) })
+
+add.page(pdevs)
+
+
+plot.new()
+plot.window(xlim=c(0,1024), ylim=c(0,768))
+
+text(1024/2, 768/2, "Hello World", cex=25)
+text(1024/2, 768/3, "Hello World", cex=25, font=3)
+text(1024/2, 768/4, "Hello World", cex=20, font=3, family='serif')
+text(1024/2, 768*0.75, "Hello World", cex=15, font=1, family='serif')
+
+add.page(pdevs)
+
+pdevs <- restart.devices(pdevs)
+
+finish.pdf(pdevs)
+
+
+pdevs <- setup.devices(pdf.name="presentation")
+
+plot.new()
+plot.window(xlim=c(0,1024), ylim=c(0,768))
+polygon(pts)
+text( mean(pts[,1]), max(pts[,2]), "The moon", adj=c(0.5, 0), cex=20)
+abline(v=mean(pts[,1]), lty=3)
+
+add.page(pdevs)
+
+pts.r <- rotate.pts(pts, a=pi/4, origin=c(mean(pts[,1]), max(pts[,2])) )
+polygon(pts.r, col=rgb(0.4, 0.2, 0.8, 0.5))
+text( min(pts.r[,1]), min(pts.r[,2]), "Dont't look at finger\nor you miss", adj=c(0.5, 1))
+
+add.page(pdevs)
+
+rect( 800, 200, 1000, 350 )
+
+## after restarting.. R
+## my device drivers are no longer active...
+## and so I cannot extend the directory anymore...
+
+c <- 1
+increment.counter(c)
+
+for(i in 1:10)
+    increment.counter(c)
 
