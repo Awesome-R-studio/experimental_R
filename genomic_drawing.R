@@ -107,8 +107,8 @@ drawCircularLinks <- function( ortho, chr.o, s1.id='s1', s2.id='s2',
                               end.s2=paste('end.', s2.id, sep=''),
                               alpha=0.1,
                               chr.col=hsvScale( as.numeric(as.factor(ortho[,chr.s1])), alpha=alpha ),
-                              i.leave=1
-
+                              i.leave=1,
+                              ...
                               ){
     lineArc( o.x, o.y, radius, a.beg, a.end, col=perimeter.col, lty=perimeter.lty)
     m <- (a.end - a.beg) / chr.o$l
@@ -117,7 +117,7 @@ drawCircularLinks <- function( ortho, chr.o, s1.id='s1', s2.id='s2',
             if( ortho[i, chr.s1] %in% names( chr.o$s1.off ) ){
                 a1 <- m * ( chr.o$s1.off[ ortho[ i, chr.s1 ] ] + ortho[ i, stt.s1 ] )
                 a2 <- m * ( chr.o$s2.off[ ortho[ i, chr.s2 ] ] + ortho[ i, stt.s2 ] )
-                connectingArc( o.x, o.y, radius, a1, a2, col=chr.col[i] )
+                connectingArc( o.x, o.y, radius, a1, a2, col=chr.col[i], ... )
             }
         }
     }
@@ -138,7 +138,7 @@ drawRadialLabels <- function( chr.o, radius, depth, o.x=0, o.y=0, a.beg=0, a.end
     label.angle.widths <- c( chr.o$s1.chr, chr.o$s2.chr ) * m
     label.widths <- label.angle.widths * radius
     ## we first try to choose a cex based on the depth of the labels
-    cex <- par('cex') * (depth / strheight('A'))
+    cex <- par('cex') * (depth * 0.8 / strheight('A'))
 
     ## then we work out the label that has the smallest amount of size and
     ## see if that fits.. 
