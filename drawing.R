@@ -1,5 +1,6 @@
 source("drawing_functions.R")
 ## test the above..
+
 plot(1,1, type='n', xlim=c(-100, 100), ylim=c(-100, 100))
 
 xleft <- -80
@@ -21,7 +22,7 @@ txt <- 'Hello there. This is a piece of text with some stuff in it. I\'m not rea
 txt.f <- usrStrWrap( 75, txt )
 txt.f <- usrStrWrap( 75, txt, cex=0.5 )
 text(25, 0, txt.f$s, adj=c(0,1), cex=0.5 )
-rect( 25, 0-txt.f$h, 100, 0, col='red' )
+rect( 25, 0-txt.f$h, 100, 0, col=rgb(0.8, 0.5, 0.8, 0.1) )
 
 ## we can now try to use the function we have to make a table of sorts ..
 ## note that this is not smart enough to sort out problems with words that don't fit
