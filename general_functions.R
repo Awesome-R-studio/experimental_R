@@ -174,7 +174,7 @@ rowVars <- function( d ){
 }
 
 ## a function to calculate mirrored distance matrices
-dyn.load("~/R/cpp/col_dist.so")
+#dyn.load("~/R/cpp/col_dist.so")
 colDist <- function( m, scale.columns=FALSE ){
     if(!is.matrix( m ))
         stop('data should be supplied as a matrix of double values')
@@ -195,7 +195,7 @@ colDist <- function( m, scale.columns=FALSE ){
 ## the user must specify a set of values, a set of mid points for
 ## the distribution, a half-kernel, and the step size of the kernel
 ## as related to the dimensions of the values and mid sizes.
-dyn.load("~/R/cpp/smoothed_hist.so")
+##dyn.load("~/R/cpp/smoothed_hist.so")
 smoothHist <- function( values, mids, kernel, kernel.unit ){
     values <- as.double( values )
     mids <- as.double( mids )
@@ -210,7 +210,7 @@ smoothHist <- function( values, mids, kernel, kernel.unit ){
 ## a method to determine clusters of points in linear space by a neareest neighbour method,
 ## where nearest is defined by a combiantion of proximity and similarity by simply
 ## allowing links to skip proximal neighbours.
-dyn.load("~/R/cpp/linear_nn.so")
+##dyn.load("~/R/cpp/linear_nn.so")
 linearNN <- function( delta, maxSkip ){
     if(!is.matrix(delta))
         stop("linearNN: delta should be a matrix")
@@ -223,7 +223,7 @@ linearNN <- function( delta, maxSkip ){
 
 ## a threshold based method that simply makes clusters on the basis of the longest
 ## internal distance within a set of adjacent positions.
-dyn.load("~/R/cpp/grow_linear_clusters.so")
+##dyn.load("~/R/cpp/grow_linear_clusters.so")
 growLinearClusters <- function( delta, max.delta ){
     if( !is.matrix(delta) )
         stop("delta must be a matrix");

@@ -1,7 +1,8 @@
 ## some functions for drawing genomic data...
 ## These rely on drawing functions in drawing_functions.R
 
-source("~/R/experimental_R/drawing_functions.R")
+source("drawing_functions.R")
+source("general_functions.R")
 
 ## orderChromosomesByOrthology
 ## This orders chromosomes or contigs from two species on the basis of the number
