@@ -1,3 +1,9 @@
+# Functions that let you draw stuff like:
+
+<figure>
+<img src="stickleback_cod.png" width="700">
+</figure>
+
 ## This should be a mixture of R and Markdown
 
 ```R

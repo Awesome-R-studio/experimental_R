@@ -67,3 +67,9 @@ stickle.ortho <- make.orthologue.table( align2.list, stickle.genes, '.gadMor2', 
 
 plotCircular( 'gadMor2', 'stickle', gadMor2.chr, stickle.chr,
              stickle.ortho, main='Gasterosteus aculateus (stickleback)' ) ## amazing!!
+
+plt  <- recordPlot()
+
+png("stickleback_cod.png", width=1200, height=1200)
+replayPlot(plt)
+dev.off()
