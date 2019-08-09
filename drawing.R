@@ -43,10 +43,10 @@ o <- with(sub.table, order( Cell_type, Generation, Feed ))
 cell.cols <- matrix(rgb(0, 0, 0, 0), nrow=nrow(sub.table), ncol=ncol(sub.table))
 cell.cols[,4] <- ifelse( sub.table[o,4] == 'Control', rgb(0, 0.4, 0.4, 0.3), rgb(0, 0, 0, 0) )
 
-pdf('table_example.pdf', width=7, height=14, title='A table from R core functions')
+png('table_example.png', width=800, height=2000, title='A table from R core functions')
 par(mar=c(0.1, 0.1, 0.1, 0.1))
 plot(1, type='n', xlim=c(0,sum(col.widths)), ylim=c(0,200), axes=FALSE, xlab='', ylab='')
-p.pos <- plotTable( 0, 200, sub.table[o,], num.format=num.format, col.margin=0.75, row.margin=1.2, cex=0.8, family='sans',
+p.pos <- plotTable( 0, 200, sub.table[o,], num.format=num.format, col.margin=0.75, row.margin=1.5, cex=1.5, family='sans',
 #                   column.bg=c(rgb(0.5,0.5,0.5,0.5), rgb(0.9, 0.9, 0.9, 0.5)),
                    row.bg=c(rgb(0.5,0.5,0.5,0.5), rgb(0.9, 0.9, 0.9, 0.5)), cell.bg=cell.cols )
 segments( p.pos$l[-1], rev(p.pos$b)[1], p.pos$l[-1], p.pos$t[1], lty=2 )
