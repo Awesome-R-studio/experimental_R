@@ -1,7 +1,13 @@
-# Functions that let you draw stuff like:
+## Functions that let you draw stuff like:
 
 <figure>
 <img src="stickleback_cod.png" width="700">
+</figure>
+
+## Or add tables to R graphics:
+
+<figure>
+<img src="table_example.png" width="700">
 </figure>
 
 ## This should be a mixture of R and Markdown
