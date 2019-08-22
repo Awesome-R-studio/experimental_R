@@ -1,8 +1,8 @@
 ## some functions for drawing genomic data...
 ## These rely on drawing functions in drawing_functions.R
 
-source("drawing_functions.R")
-source("general_functions.R")
+source("~/R/experimental_R/drawing_functions.R")
+source("~/R/experimental_R/general_functions.R")
 
 ## orderChromosomesByOrthology
 ## This orders chromosomes or contigs from two species on the basis of the number
@@ -67,6 +67,11 @@ orderByOrthology <- function( ortho, s1.chr, s2.chr, s1.id='s1', s2.id='s2',
             s2.chr.o <- c(s2.chr.o, s2.c[o[i]])
         i <- i + 1
     }
+    ## add on any missing chromosomes in the order they appear
+    if( length(setdiff(names(s1.chr), s1.chr.o )) > 0 )
+        s1.chr.o <- c( s1.chr.o, setdiff( names(s1.chr), s1.chr.o )) 
+    if( length(setdiff(names(s2.chr), s2.chr.o)) > 0 )
+        s2.chr.o <- c( s2.chr.o, setdiff( names(s2.chr), s2.chr.o))
     ## s1.chr.o is now the order of species one
     ## s2.chr.o and the same for the second species
     if( reverse.s2 )

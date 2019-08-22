@@ -330,7 +330,7 @@ boxText <- function(r, txt, max.cex=NA, min.cex=NA, margin=0.1, ...){
 plotTable <- function(x, y, df, c.widths=NULL, num.format=NA,
                       row.margin=1, col.margin=0.1, doPlot=TRUE,
                       row.bg=NA, column.bg=NA, cell.bg=NA, text.col=1,
-                      text.adj=c(0,1),
+                      text.adj=c(0,0.5),
                       ...){
     df.m <- as.matrix(df)
     if(length(num.format) > 1 || !is.na(num.format)){
@@ -376,12 +376,12 @@ plotTable <- function(x, y, df, c.widths=NULL, num.format=NA,
     y.bot <- y - cumsum(r.heights)
     y.top <- c(y, y.bot[ -length(y.bot) ])
     x.right <- x + cumsum(c.widths)
-    x.left <- c(x, x.right[ -length(x.right) ])
+    x.left <- c(x, x.right[ -length(x.right) ]) 
     
     ## redo these so that we can have a matrix of each positions.
     y.top.m <- matrix( rep(y.top, ncol(df.m)), nrow=length(y.top) )
     y.bot.m <- matrix( rep(y.bot, ncol(df.m)), nrow=length(y.bot) )
-    x.left.m <- matrix( rep(x.left, nrow(df.m)), ncol=length(x.left), byrow=TRUE )
+    x.left.m <- matrix( rep(x.left + text.adj[1] * (c.widths - h.margin*1.5), nrow(df.m)), ncol=length(x.left), byrow=TRUE )
     c.widths.m <- matrix( rep(c.widths, nrow(df.m)), ncol=length(c.widths), byrow=TRUE )
     
     ## then simply,,
@@ -392,9 +392,9 @@ plotTable <- function(x, y, df, c.widths=NULL, num.format=NA,
             rect( x.left, rev(y.bot)[1], x.right, y.top[1], col=column.bg, border=NA )
         if(is.matrix(cell.bg) && nrow(cell.bg) == nrow(df.m) && ncol(cell.bg) == ncol(df.m))
             rect( x.left.m, y.bot.m, x.left.m + c.widths.m, y.bot.m + r.heights, col=cell.bg, border=NA )
-        text( x.left.m + h.margin/2, y.top.m - v.margin, df.m, adj=text.adj, col=text.col, ... )
+        text( x.left.m + h.margin/2, (y.top.m + y.bot.m)/2, df.m, adj=text.adj, col=text.col, ... )
     }
-    invisible( list('r'=x.right, 'l'=x.left, 't'=y.top, 'b'=y.bot) )
+    invisible( list('r'=x.right, 'l'=x.left, 't'=y.top, 'b'=y.bot, 'h.m'=h.margin, 'v.m'=v.margin) )
 }
 
 
