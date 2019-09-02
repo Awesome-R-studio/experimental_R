@@ -155,7 +155,7 @@ drawRadialLabels <- function( chr.o, radius, depth, o.x=0, o.y=0, a.beg=0, a.end
         cex <- cex * min.width.r
 
     ## lets then do something to work out what is happening with the colours...
-    same.colors <- all(label.border == fg)
+    same.colors <- all(label.border == bg)
     if( length(bg) == 1 ){
         bg <- rep(bg, length(label.offsets))
     }
@@ -174,7 +174,7 @@ drawRadialLabels <- function( chr.o, radius, depth, o.x=0, o.y=0, a.beg=0, a.end
     ## then use the native kerning... hmm.
     ## this turns out to be a little more complicated than expected. But seems to work.
     for(i in 1:length(label.offsets)){
-        polygArc( o.x, o.y, radius, depth, label.offsets[i], label.offsets[i] + label.angle.widths[i], col=bg[i], border=label.border )
+        polygArc( o.x, o.y, radius, depth, label.offsets[i], label.offsets[i] + label.angle.widths[i], col=bg[i], border=label.border[i] )
         if(cex > min.cex){
             chars <- strsplit(label.text[i], '')[[1]]
             char.angles <- 0.5 * strwidth(chars, cex=cex) / radius
